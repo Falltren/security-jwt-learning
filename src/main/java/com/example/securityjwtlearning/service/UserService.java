@@ -1,5 +1,6 @@
 package com.example.securityjwtlearning.service;
 
+import com.example.securityjwtlearning.dto.RegistrationUserDto;
 import com.example.securityjwtlearning.entity.User;
 import com.example.securityjwtlearning.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final RoleService roleService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -37,11 +40,20 @@ public class UserService implements UserDetailsService {
                         MessageFormat.format("Пользователь с именем {0} не найден", username)));
     }
 
-    public void createNewUser(User user) {
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+    public void createNewUser(RegistrationUserDto userDto) {
+        if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new RuntimeException("Пользователь с таким именем уже существует");
         }
-        user.setRoles(List.of(roleService.getRole("ROLE_USER")));
+        User user = User.builder()
+                .username(userDto.getUsername())
+                .email(userDto.getEmail())
+                .password(passwordEncoder.encode(userDto.getPassword()))
+                .roles(List.of(roleService.getRole("ROLE_USER")))
+                .build();
         userRepository.save(user);
+    }
+
+    public boolean isExistsUser(String name) {
+        return userRepository.findByUsername(name).isPresent();
     }
 }
